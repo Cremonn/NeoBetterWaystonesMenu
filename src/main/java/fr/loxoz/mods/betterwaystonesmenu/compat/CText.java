@@ -1,8 +1,8 @@
 package fr.loxoz.mods.betterwaystonesmenu.compat;
 
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.TextComponent;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.Component.literal;
+import net.minecraft.network.chat.Component.translatable;
 
 /**
  * I usually make this utility file for large projects that could support multiple versions of Minecraft to make
@@ -11,18 +11,18 @@ import net.minecraft.network.chat.TranslatableComponent;
  */
 public class CText {
     public static MutableComponent literal(String string) {
-        return new TextComponent(string);
+        return new Component.literal(string);
     }
 
     public static MutableComponent translatable(String key) {
-        return new TranslatableComponent(key);
+        return new Component.translatable(key);
     }
 
     public static MutableComponent translatable(String key, Object ...args) {
-        return new TranslatableComponent(key, args);
+        return new Component.translatable(key, args);
     }
 
     public static MutableComponent empty() {
-        return new TextComponent("");
+        return new Component.literal("");
     }
 }
