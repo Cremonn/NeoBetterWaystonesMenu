@@ -3,6 +3,7 @@ package fr.loxoz.mods.betterwaystonesmenu.gui.screen;
 import fr.loxoz.mods.betterwaystonesmenu.BetterWaystonesMenu;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.ITooltipProviderParent;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.PositionedTooltip;
+import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.TooltipOffset;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.TooltipPos;
 import net.blay09.mods.waystones.menu.WaystoneSelectionMenu;
 import net.minecraft.client.gui.GuiGraphics;
@@ -17,7 +18,6 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
     public static int CONTENT_WIDTH = 200;
     public static int BTN_GAP = 2;
     public static int UI_GAP = 8;
-    // ResourceLocation.fromNamespaceAndPath no 1.21
     public static final ResourceLocation MENU_TEXTURE = ResourceLocation.fromNamespaceAndPath(BetterWaystonesMenu.MOD_ID, "textures/gui/menu.png");
     public static float menuHeightScale = 0.66f;
 
@@ -26,7 +26,6 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
         menuHeightScale = BetterWaystonesMenu.inst().config().menuHeightScale.get().floatValue();
     }
 
-    // PoseStack → GuiGraphics em todos os métodos de render
     protected void renderChildrenTooltip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         for (var provider : getTooltips()) {
             renderPositionedTooltip(provider, guiGraphics, mouseX, mouseY);
@@ -36,17 +35,20 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
     protected BetterWaystonesMenu inst() { return BetterWaystonesMenu.inst(); }
 
     protected void drawVersionInfo(GuiGraphics guiGraphics) {
-        var info = inst().getModInfo();
-        if (info != null) {
-            // drawString → guiGraphics.drawString no 1.21
-            guiGraphics.drawString(font, String.format("%s v%s", info.getDisplayName(), info.getVersion()), 32, height - font.lineHeight - UI_GAP, 0x33ffffff);
+        // getModInfo() removido — acesso direto ao modContainer
+        var container = inst().getModContainer();
+        if (container != null) {
+            var info = container.getModInfo();
+            guiGraphics.drawString(font,
+                    String.format("%s v%s", info.getDisplayName(), info.getVersion()),
+                    32, height - font.lineHeight - UI_GAP, 0x33ffffff, false);
         }
     }
 
     protected void renderPositionedTooltip(PositionedTooltip tooltip, GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        TooltipPos pos = tooltip.getTooltipPos(mouseX, mouseY);
-        // renderTooltip no 1.21 recebe GuiGraphics + lista de ClientTooltipComponent + x + y
-        guiGraphics.renderComponentTooltip(font, tooltip.getTooltip(), pos.x(), pos.y());
+        // getTooltipPos agora requer 3 args
+        TooltipPos pos = tooltip.getTooltipPos(mouseX, mouseY, new TooltipOffset(0, 0));
+        guiGraphics.renderComponentTooltip(font, tooltip.getTooltipComponents(), pos.x(), pos.y());
     }
 
     @Override
@@ -68,7 +70,6 @@ public abstract class AbstractBetterWaystoneScreen extends AbstractContainerScre
         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
-    // renderBg agora recebe GuiGraphics
     @Override
     protected void renderBg(@NotNull GuiGraphics guiGraphics, float delta, int mouseX, int mouseY) {}
 }
