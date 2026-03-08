@@ -8,9 +8,9 @@ import fr.loxoz.mods.betterwaystonesmenu.compat.widget.WidgetCompat;
 import fr.loxoz.mods.betterwaystonesmenu.util.Easing;
 import fr.loxoz.mods.betterwaystonesmenu.util.Easings;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics; // PoseStack → GuiGraphics
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Renderable;  // Widget → Renderable
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.AbstractContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -60,24 +60,17 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
 
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }
-
     public int getY() { return y; }
     public void setY(int y) { this.y = y; }
-
     public int getWidth() { return width; }
     public void setWidth(int width) { this.width = width; }
-
     public int getHeight() { return height; }
     public void setHeight(int height) {
         boolean bottom = getTargetScrollY() >= getMaxScrollY();
         this.height = height;
         scrollTo(bottom ? getMaxScrollY() : getTargetScrollY());
     }
-
-    public void setSize(int width, int height) {
-        setWidth(width);
-        setHeight(height);
-    }
+    public void setSize(int width, int height) { setWidth(width); setHeight(height); }
 
     public boolean isAnimated() { return animated; }
     public void setAnimated(boolean animated) { this.animated = animated; }
@@ -92,42 +85,32 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
             scrollY = targetScrollY;
             return;
         }
-        if (scrollY != targetScrollY) {
-            scrollYStart = System.currentTimeMillis();
-        }
+        if (scrollY != targetScrollY) scrollYStart = System.currentTimeMillis();
     }
 
     public void scrollBy(double amount) { scrollBy(amount, true); }
     public void scrollBy(double amount, boolean animated) { scrollTo(targetScrollY - amount, animated); }
 
-    public void setContentHeight(double height) {
-        contentHeight = height;
-        scrollTo(getTargetScrollY());
-    }
+    public void setContentHeight(double height) { contentHeight = height; scrollTo(getTargetScrollY()); }
     public double getContentHeight() { return contentHeight; }
-
     public double getScrollY() { return scrollY; }
     public void setScrollY(double scrollY) { scrollTo(scrollY, false); }
     public double getTargetScrollY() { return targetScrollY; }
-
     public double getMaxScrollY() { return Math.max(0, contentHeight - getHeight()); }
-
     public boolean isHovered() { return hovered; }
     public boolean isFocused() { return false; }
 
     @Override
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
-
     public boolean isVisible() { return visible; }
     public void setVisible(boolean visible) { this.visible = visible; }
-
     public boolean canInteract() { return isActive() && isVisible(); }
-
     public int getScrollbarWidth() { return 8; }
 
     public boolean isScrollbarAt(double mouseX, double mouseY) {
-        return mouseX >= (getX() + getWidth() - getScrollbarWidth()) && mouseX <= (getX() + getWidth()) && mouseY >= getY() && mouseY < (getY() + getHeight());
+        return mouseX >= (getX() + getWidth() - getScrollbarWidth()) && mouseX <= (getX() + getWidth())
+                && mouseY >= getY() && mouseY < (getY() + getHeight());
     }
 
     public int getInnerWidth() { return getWidth() - getScrollbarWidth(); }
@@ -146,7 +129,6 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
         }
     }
 
-    // render helpers atualizados para GuiGraphics
     public void applyTranslate(@NotNull GuiGraphics guiGraphics) {
         guiGraphics.pose().translate(getX(), getY() - getScrollY(), 0);
     }
@@ -203,10 +185,7 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        if (!isVisible()) {
-            hovered = false;
-            return;
-        }
+        if (!isVisible()) { hovered = false; return; }
         hovered = isMouseInside(mouseX, mouseY);
         scrollbarHovered = isScrollbarAt(mouseX, mouseY);
         update();
@@ -217,44 +196,30 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
 
     @Override
     public @NotNull Optional<GuiEventListener> getChildAt(double x, double y) {
-        double childMouseX = x - getX();
-        double childMouseY = y - getY() + getScrollY();
-        return super.getChildAt(childMouseX, childMouseY);
+        return super.getChildAt(x - getX(), y - getY() + getScrollY());
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!canInteract()) return false;
         if (isScrollbarAt(mouseX, mouseY)) {
-            if (button == 0 && isOverflowing()) {
-                scrollbarYDragged = true;
-            }
+            if (button == 0 && isOverflowing()) scrollbarYDragged = true;
             return true;
         }
         if (!isMouseInside(mouseX, mouseY)) return false;
-        double childMouseX = mouseX - getX();
-        double childMouseY = mouseY - getY() + getScrollY();
-        return super.mouseClicked(childMouseX, childMouseY, button);
+        return super.mouseClicked(mouseX - getX(), mouseY - getY() + getScrollY(), button);
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0 && scrollbarYDragged) {
-            scrollbarYDragged = false;
-            return true;
-        }
+        if (button == 0 && scrollbarYDragged) { scrollbarYDragged = false; return true; }
         if (!canInteract()) return false;
-        double childMouseX = mouseX - getX();
-        double childMouseY = mouseY - getY() + getScrollY();
-        return super.mouseReleased(childMouseX, childMouseY, button);
+        return super.mouseReleased(mouseX - getX(), mouseY - getY() + getScrollY(), button);
     }
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (!canInteract()) {
-            if (scrollbarYDragged) scrollbarYDragged = false;
-            return false;
-        }
+        if (!canInteract()) { if (scrollbarYDragged) scrollbarYDragged = false; return false; }
         if (scrollbarYDragged) {
             if (mouseY < getY()) setScrollY(0);
             else if (mouseY > getY() + getHeight()) setScrollY(getMaxScrollY());
@@ -264,20 +229,15 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
             }
             return true;
         }
-        double childMouseX = mouseX - getX();
-        double childMouseY = mouseY - getY() + getScrollY();
-        return super.mouseDragged(childMouseX, childMouseY, button, deltaX, deltaY);
+        return super.mouseDragged(mouseX - getX(), mouseY - getY() + getScrollY(), button, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
-        // 1.21: mouseScrolled agora recebe deltaX e deltaY separados
         if (!canInteract()) return false;
         if (!isMouseInside(mouseX, mouseY)) return false;
         if (!isScrollbarAt(mouseX, mouseY)) {
-            double childMouseX = mouseX - getX();
-            double childMouseY = mouseY - getY() + getScrollY();
-            if (super.mouseScrolled(childMouseX, childMouseY, deltaX, deltaY)) return true;
+            if (super.mouseScrolled(mouseX - getX(), mouseY - getY() + getScrollY(), deltaX, deltaY)) return true;
         }
         scrollBy(deltaY * scrollDeltaY);
         return true;
@@ -285,39 +245,25 @@ public class ScrollableContainerWidget extends AbstractContainerEventHandler imp
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (super.keyPressed(keyCode, scanCode, modifiers)) return true;
+        // substitui changeFocus — ao navegar com TAB, scrola o elemento em foco pra view
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            for (var child : children) {
+                if (child != getFocused()) continue;
+                if (!(child instanceof AbstractWidget widget)) continue;
+                if (!widget.isFocused()) continue;
+                scrollElementIntoView(widget);
+            }
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_UP) { scrollBy(scrollDeltaY); return true; }
         if (keyCode == GLFW.GLFW_KEY_DOWN) { scrollBy(-scrollDeltaY); return true; }
         if (keyCode == GLFW.GLFW_KEY_PAGE_UP) { scrollBy(scrollDeltaY * 6); return true; }
         if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) { scrollBy(-scrollDeltaY * 6); return true; }
         return false;
     }
-// changeFocus removido em 1.21.1 — tratado via keyPressed (TAB)
-@Override
-public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-    if (super.keyPressed(keyCode, scanCode, modifiers)) return true;
-    if (keyCode == GLFW.GLFW_KEY_TAB) {
-        var children = children();
-        if (children.isEmpty()) return false;
-        var focused = getFocused();
-        int idx = focused != null ? children.indexOf(focused) : -1;
-        int next = Screen.hasShiftDown() ? idx - 1 : idx + 1;
-        if (next >= 0 && next < children.size()) {
-            var nextWidget = children.get(next);
-            setFocused(nextWidget);
-            if (nextWidget instanceof AbstractWidget w) scrollElementIntoView(w);
-        }
-        return true;
-    }
-    if (keyCode == GLFW.GLFW_KEY_UP) { scrollBy(scrollDeltaY); return true; }
-    if (keyCode == GLFW.GLFW_KEY_DOWN) { scrollBy(-scrollDeltaY); return true; }
-    if (keyCode == GLFW.GLFW_KEY_PAGE_UP) { scrollBy(scrollDeltaY * 6); return true; }
-    if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN) { scrollBy(-scrollDeltaY * 6); return true; }
-    return false;
-}
 
     public void scrollElementIntoView(AbstractWidget widget) {
-        scrollElementIntoView(widget.getY(), widget.getHeight()); // widget.y → widget.getY()
+        scrollElementIntoView(widget.getY(), widget.getHeight());
     }
     public void scrollElementIntoView(int elementY, int elementHeight) {
         if (isElementFullyVisible(getY() + elementY, getY() + elementY + elementHeight)) return;
@@ -364,7 +310,7 @@ public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 
     @Override
     public @NotNull TooltipOffset getWidgetsTooltipOffset() {
-        return new TooltipOffset(getX(), (int) (getY() - getScrollY()));
+        return new TooltipOffset(getX(), (int)(getY() - getScrollY()));
     }
 
     @Override
@@ -378,7 +324,7 @@ public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
     }
 
     private int getScrollbarThumbHeight() {
-        return Mth.clamp((int) ((float) (height * height) / contentHeight), 32, height);
+        return Mth.clamp((int)((float)(height * height) / contentHeight), 32, height);
     }
 
     public double ease(double start, double end, double t) {
