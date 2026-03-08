@@ -277,15 +277,19 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    public void swapWaystones(int index, int otherIndex) {
+public void swapWaystones(int index, int otherIndex) {
         //noinspection ConstantConditions
-        PlayerWaystoneManager.swapWaystoneSorting(minecraft.player, index, otherIndex);
-        Balm.getNetworking().sendToServer(new SortWaystoneMessage(
-                waystones.get(index).getWaystoneUid(),
-                waystones.get(otherIndex).getWaystoneUid()
-        ));
-        updateList();
-    }
+    PlayerWaystoneManager.sortWaystoneSwap(
+        minecraft.player,
+        waystones.get(index).getWaystoneUid(),
+        waystones.get(otherIndex).getWaystoneUid()
+    );
+    Balm.getNetworking().sendToServer(new SortWaystoneMessage(
+        waystones.get(index).getWaystoneUid(),
+        waystones.get(otherIndex).getWaystoneUid()
+    ));
+    updateList();
+}
 
     public void shiftWaystone(int index, int offset, boolean shift) {
         if (index >= 0 && index < waystones.size()) {
