@@ -55,7 +55,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
 
     public BetterWaystoneSelectionScreenBase(WaystoneSelectionMenu container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title);
-        this.waystones = container.getWaystones();
+        this.waystones = new ArrayList<>(container.getWaystones());
         //noinspection SuspiciousNameCombination
         imageWidth = imageHeight = CONTENT_WIDTH;
     }
