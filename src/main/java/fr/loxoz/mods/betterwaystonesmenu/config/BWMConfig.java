@@ -1,19 +1,19 @@
 package fr.loxoz.mods.betterwaystonesmenu.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class BWMConfig {
-    public final ForgeConfigSpec.EnumValue<BWMSortMode> sortMode;
-    public final ForgeConfigSpec.BooleanValue reducedMotion;
-    public final ForgeConfigSpec.BooleanValue focusSearch;
-    public final ForgeConfigSpec.DoubleValue menuHeightScale;
+    public final ModConfigSpec.EnumValue<BWMSortMode> sortMode;
+    public final ModConfigSpec.BooleanValue reducedMotion;
+    public final ModConfigSpec.BooleanValue focusSearch;
+    public final ModConfigSpec.DoubleValue menuHeightScale;
     // advanced
-    public final ForgeConfigSpec.BooleanValue specialCharsFirst;
-    public final ForgeConfigSpec.BooleanValue weightedSearch;
+    public final ModConfigSpec.BooleanValue specialCharsFirst;
+    public final ModConfigSpec.BooleanValue weightedSearch;
     // disabled
-    public final ForgeConfigSpec.BooleanValue disabled;
+    public final ModConfigSpec.BooleanValue disabled;
 
-    public BWMConfig(ForgeConfigSpec.Builder builder) {
+    public BWMConfig(ModConfigSpec.Builder builder) {
         sortMode = builder
                 .comment("Waystone List Sorting Mode")
                 .defineEnum("sortMode", BWMSortMode.NAME);
@@ -26,7 +26,6 @@ public class BWMConfig {
         menuHeightScale = builder
                 .comment("Menu height scale in percentage")
                 .defineInRange("menuHeightScale", 0.66d, 0.4d, 0.8d);
-
         builder.push("advanced");
         specialCharsFirst = builder
                 .comment("Put Special Characters at first for Sort by Name mode")
@@ -35,7 +34,6 @@ public class BWMConfig {
                 .comment("Show most relevant search results first")
                 .define("weightedSearch", true);
         builder.pop();
-
         disabled = builder
                 .comment("Completely disable the menu")
                 .define("disabled", false);
