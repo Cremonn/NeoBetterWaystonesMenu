@@ -1,9 +1,7 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.widget;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import fr.loxoz.mods.betterwaystonesmenu.compat.widget.WidgetCompat;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -29,22 +27,17 @@ public class BetterTextFieldWidget extends EditBox {
     }
 
     @Override
-    public void renderButton(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
-        super.renderButton(matrices, mouseX, mouseY, partialTicks);
+    public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.renderWidget(guiGraphics, mouseX, mouseY, partialTicks);
         if (!isVisible()) return;
         if (!getValue().isEmpty()) return;
-        Minecraft.getInstance().font.drawShadow(matrices, getMessage(), x + 4, y + (height - 8f) / 2f, 0xff262626);
+        // drawShadow → drawString com shadow=true; x/y → getX()/getY()
+        guiGraphics.drawString(font, getMessage(), getX() + 4, (int) (getY() + (height - 8f) / 2f), 0xff262626, false);
     }
 
-    // because of Forge Gradle we can't use the WidgetCompat class as setX is defined in parent class and gets remapped
-    public int _getX() { return x; }
-    public void _setX(int x) { this.x = x; }
-
-    public int _getY() { return y; }
-    public void _setY(int y) { this.y = y; }
-
+    // Em 1.21.1 setX/setY/getX/getY já existem no parent — sem necessidade de wrappers
     public void setPosition(int x, int y) {
-        _setX(x);
-        _setY(y);
+        setX(x);
+        setY(y);
     }
 }
