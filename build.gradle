@@ -1,48 +1,59 @@
 plugins {
-    id 'net.neoforged.gradle.userdev' version '7.0.+' // ForgeGradle → NeoGradle
+    id 'net.neoforged.gradle.userdev' version '7.0.+'
 }
 
 version = "${project.mod_version}+mc${project.minecraft_version}"
 group = project.maven_group
 
 base {
-    archivesName = project.archives_base_name // java.archivesBaseName → base.archivesName
+    archivesName = project.archives_base_name
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21) // 1.21.1 requer Java 21
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
-// NeoForge usa o bloco `runs` diretamente, sem o bloco `minecraft {}`
+dependencies {
+    implementation "net.neoforged:neoforge:${project.neoforge_version}"
+    implementation "maven.modrinth:balm:${project.balm_version}"
+    implementation "maven.modrinth:waystones:${project.waystones_version}"
+
+    for (extraModJar in fileTree(dir: "extra-mods", include: '*.jar')) {
+        def basename = extraModJar.name.substring(0, extraModJar.name.length() - ".jar".length())
+        def versionSep = basename.lastIndexOf('-')
+        assert versionSep != -1
+        def artifactId = basename.substring(0, versionSep)
+        def version = basename.substring(versionSep + 1)
+        runtimeOnly "extra-mods:$artifactId:$version"
+    }
+}
+
+// NeoGradle 7.0: runs ficam dentro de subsystems
+subsystems {
+    parchment {
+        minecraftVersion = project.minecraft_version
+    }
+}
+
 runs {
+    configureEach {
+        modSource project.sourceSets.main
+    }
+
     client {
-        client()
         workingDirectory project.file('run')
-        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        modSource sourceSets.main
     }
 
     server {
-        server()
         workingDirectory project.file('run/server')
-        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        modSource sourceSets.main
-    }
-
-    gameTestServer {
-        type = net.neoforged.gradle.dsl.common.runs.type.RunType.GAME_TEST_SERVER
-        workingDirectory project.file('run/gametestserver')
-        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        modSource sourceSets.main
+        programArgument '--nogui'
     }
 
     data {
-        data()
         workingDirectory project.file('run')
         programArguments.addAll '--mod', project.mod_id, '--all',
                 '--output', file('src/generated/resources/').absolutePath,
                 '--existing', file('src/main/resources/').absolutePath
-        modSource sourceSets.main
     }
 }
 
@@ -56,25 +67,6 @@ repositories {
     flatDir {
         name "extra-mods"
         dir file("extra-mods")
-    }
-}
-
-dependencies {
-    // NeoForge: sem fg.deobf, sem "minecraft", direto como implementation
-    implementation "net.neoforged:neoforge:${project.neoforge_version}"
-
-    // Balm e Waystones: sem fg.deobf no NeoGradle
-    implementation "maven.modrinth:balm:${project.balm_version}"
-    implementation "maven.modrinth:waystones:${project.waystones_version}"
-
-    // Extra mods locais para runtime
-    for (extraModJar in fileTree(dir: "extra-mods", include: '*.jar')) {
-        def basename = extraModJar.name.substring(0, extraModJar.name.length() - ".jar".length())
-        def versionSep = basename.lastIndexOf('-')
-        assert versionSep != -1
-        def artifactId = basename.substring(0, versionSep)
-        def version = basename.substring(versionSep + 1)
-        runtimeOnly "extra-mods:$artifactId:$version"
     }
 }
 
@@ -94,9 +86,6 @@ jar {
         ])
     }
 }
-
-// jar.finalizedBy('reobfJar') — REMOVIDO: NeoForge não usa reobfuscação
-// O jar final já sai com os nomes corretos (Mojang mappings por padrão)
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
