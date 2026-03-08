@@ -11,10 +11,10 @@ import fr.loxoz.mods.betterwaystonesmenu.util.WaystoneUtils;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.IQueryMatcher;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.PartsQueryMatcher;
 import net.blay09.mods.balm.api.Balm;
-import net.blay09.mods.waystones.api.Waystone;              // IWaystone → Waystone
-import net.blay09.mods.waystones.api.WaystoneTypes;         // core → api
-import net.blay09.mods.waystones.api.WaystoneVisibility;    // novo
-import net.blay09.mods.waystones.core.PlayerWaystoneManager;
+import net.blay09.mods.waystones.api.Waystone;
+import net.blay09.mods.waystones.api.WaystoneTypes;
+import net.blay09.mods.waystones.api.WaystoneVisibility;
+import net.blay09.mods.waystones.api.requirement.WarpRequirement;
 import net.blay09.mods.waystones.menu.WaystoneSelectionMenu;
 import net.blay09.mods.waystones.network.message.RequestEditWaystoneMessage;
 import net.blay09.mods.waystones.network.message.SelectWaystoneMessage;
@@ -23,16 +23,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.core.registries.BuiltInRegistries; // ForgeRegistries → BuiltInRegistries
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,10 +52,18 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
     private Component heading_title;
     private final List<Waystone> visibleWaystones = new ArrayList<>();
 
+    // WarpRequirement placeholder — sem custo de XP
+    private static final WarpRequirement EMPTY_REQUIREMENT = new WarpRequirement() {
+        public boolean canAfford(Player player) { return true; }
+        public void consume(Player player) {}
+        public void rollback(Player player) {}
+        public void appendHoverText(Player player, List<Component> tooltip) {}
+        public boolean isEmpty() { return true; }
+    };
+
     public BetterWaystoneSelectionScreenBase(WaystoneSelectionMenu container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title);
         this.waystones = new ArrayList<>(container.getWaystones());
-        //noinspection SuspiciousNameCombination
         imageWidth = imageHeight = CONTENT_WIDTH;
     }
 
@@ -64,43 +71,31 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
     public Screen getOriginalScreen() { return originalScreen; }
 
     protected @Nullable Vec3 getOriginPos() {
-        if (menu.getWaystoneFrom() != null) {
-            return Vec3.atBottomCenterOf(menu.getWaystoneFrom().getPos());
-        }
-        if (minecraft != null && minecraft.player != null) {
-            return minecraft.player.position();
-        }
+        if (menu.getWaystoneFrom() != null) return Vec3.atBottomCenterOf(menu.getWaystoneFrom().getPos());
+        if (minecraft != null && minecraft.player != null) return minecraft.player.position();
         return null;
     }
 
     protected @Nullable ResourceKey<Level> getOriginDim() {
-        if (menu.getWaystoneFrom() != null) {
-            return menu.getWaystoneFrom().getDimension();
-        }
-        if (minecraft != null && minecraft.player != null) {
-            return minecraft.player.clientLevel.dimension();
-        }
+        if (menu.getWaystoneFrom() != null) return menu.getWaystoneFrom().getDimension();
+        if (minecraft != null && minecraft.player != null) return minecraft.player.clientLevel.dimension();
         return null;
     }
 
     protected void updateFilters() {
         visibleWaystones.clear();
         List<Waystone> list;
-
         Map<Waystone, Float> resultScores = inst().config().weightedSearch.get() ? new HashMap<>() : null;
         if (queryMatcher.isBlank()) {
             list = waystones;
         } else {
-            // getName() agora retorna Component — usar .getString()
             Predicate<Waystone> predicate = waystone -> queryMatcher.match(waystone.getName().getString());
             if (resultScores != null) {
                 predicate = waystone -> resultScores.compute(waystone, ($, score) ->
                         score == null ? queryMatcher.matchScore(waystone.getName().getString()) : score) > 0;
             }
-            // hasName() substitui !getName().isBlank()
             list = waystones.stream().filter(Waystone::hasName).filter(predicate).toList();
         }
-
         final Vec3 origin = Optional.ofNullable(getOriginPos()).orElse(new Vec3(0, 0, 0));
         Comparator<Waystone> sortComparator = getSortComparator(sortMode, origin);
         Comparator<Waystone> comparator = sortComparator;
@@ -111,28 +106,19 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
                 return sortComparator != null ? sortComparator.compare(w1, w2) : 0;
             };
         }
-        if (comparator != null) {
-            list = list.stream().sorted(comparator).toList();
-        }
-
+        if (comparator != null) list = list.stream().sorted(comparator).toList();
         visibleWaystones.addAll(list);
     }
 
     protected int getSpecialCharWeight(String str) {
         if (str.isBlank()) return 0;
         char c = str.trim().charAt(0);
-        return switch (c) {
-            case '-' -> 10;
-            case '=' -> 5;
-            case '~' -> 2;
-            default -> 0;
-        };
+        return switch (c) { case '-' -> 10; case '=' -> 5; case '~' -> 2; default -> 0; };
     }
 
     public @Nullable Comparator<Waystone> getSortComparator(BWMSortMode mode, Vec3 origin) {
         return switch (mode) {
             case NAME -> (w1, w2) -> {
-                // hasName() substitui !getName().isBlank()
                 int unnamedDiff = (w2.hasName() ? 0 : -1) - (w1.hasName() ? 0 : -1);
                 if (unnamedDiff != 0) return unnamedDiff;
                 if (inst().config().specialCharsFirst.get()) {
@@ -141,7 +127,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
                 }
                 return Collator.getInstance().compare(w1.getName().getString(), w2.getName().getString());
             };
-            case DISTANCE -> (w1, w2) -> (int) (
+            case DISTANCE -> (w1, w2) -> (int)(
                     origin.distanceToSqr(Vec3.atBottomCenterOf(w1.getPos())) -
                     origin.distanceToSqr(Vec3.atBottomCenterOf(w2.getPos()))
             );
@@ -156,11 +142,9 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         updateList();
     }
 
+    // getWarpMode() removido — usa getWarpItem()
     protected boolean isIconHeading() {
-        return switch (menu.getWarpMode()) {
-            case WARP_STONE, WARP_SCROLL -> true;
-            default -> false;
-        };
+        return !menu.getWarpItem().isEmpty();
     }
 
     protected boolean shouldShownHeading() {
@@ -177,7 +161,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         int cbw = cw + sbw * 2;
         int cbx = (width - cbw) / 2;
         imageWidth = Math.max(cbw, title_w);
-        imageHeight = (int) (height * menuHeightScale) + (UI_GAP * 2);
+        imageHeight = (int)(height * menuHeightScale) + (UI_GAP * 2);
         super.init();
         int hw = Math.max(title_w, cw);
         int hx = (width - hw) / 2;
@@ -196,7 +180,8 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
             addRenderableWidget(new TexturedButtonTooltipWidget(
                     area_heading.getX() + area_heading.getWidth() - 18, area_heading.getY(), 18, 18,
                     0, 40, 18, MENU_TEXTURE, 256, 256,
-                    $ -> Balm.getNetworking().sendToServer(new RequestEditWaystoneMessage(menu.getWaystoneFrom().getWaystoneUid())),
+                    // RequestEditWaystoneMessage aceita BlockPos, não UUID
+                    $ -> Balm.getNetworking().sendToServer(new RequestEditWaystoneMessage(menu.getWaystoneFrom().getPos())),
                     CText.translatable("gui.betterwaystonesmenu.waystone_selection.rename")));
         }
 
@@ -205,12 +190,15 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         if (allowSorting() || allowDeletion()) {
             addRenderableWidget(new TexturedButtonTooltipWidget(cbx, sby, 20, 20, 20, 0, 20, MENU_TEXTURE, 256, 256, $ -> {
                 Objects.requireNonNull(minecraft);
-                minecraft.setScreen(new BetterWaystoneRearrangeScreen(menu, minecraft.player.getInventory(), this, new BetterWaystoneRearrangeScreen.Allowed(allowSorting(), allowDeletion())));
+                minecraft.setScreen(new BetterWaystoneRearrangeScreen(menu, minecraft.player.getInventory(), this,
+                        new BetterWaystoneRearrangeScreen.Allowed(allowSorting(), allowDeletion())));
             }, CText.translatable("gui.betterwaystonesmenu.waystone_selection.rearrange")));
             sby += 20 + UI_GAP;
         }
 
-        addRenderableWidget(new ConfigButtonWidget(cbx, sby, CText.translatable("gui.betterwaystonesmenu.waystone_selection.open_config"), inst().getConfigScreen(minecraft, this).orElse(null)));
+        addRenderableWidget(new ConfigButtonWidget(cbx, sby,
+                CText.translatable("gui.betterwaystonesmenu.waystone_selection.open_config"),
+                inst().getConfigScreen(minecraft, this).orElse(null)));
         sby += 20 + UI_GAP;
 
         addRenderableWidget(new TexturedButtonTooltipWidget(cbx, sby, 20, 20, 0, 0, 20, MENU_TEXTURE, 256, 256, $ -> {
@@ -219,15 +207,14 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         }, CText.translatable("gui.betterwaystonesmenu.waystone_selection.return_to_original")));
 
         if (queryField == null) {
-            queryField = new BetterTextFieldWidget(font, 0, 0, 100, area_query.getHeight(), CText.translatable("gui.betterwaystonesmenu.waystone_selection.query_waystones"));
+            queryField = new BetterTextFieldWidget(font, 0, 0, 100, area_query.getHeight(),
+                    CText.translatable("gui.betterwaystonesmenu.waystone_selection.query_waystones"));
             queryField.setMaxLength(128);
         }
         queryField.setPosition(area_query.getX(), area_query.getY());
         queryField.setWidth(area_query.getWidth() - 20 - UI_GAP);
         addRenderableWidget(queryField);
-        if (inst().config().focusSearch.get()) {
-            setInitialFocus(queryField);
-        }
+        if (inst().config().focusSearch.get()) setInitialFocus(queryField);
 
         TexturedEnumButtonWidget<BWMSortMode> sortModeBtn = new TexturedEnumButtonWidget<>(
                 area_query.getX() + area_query.getWidth() - 20, area_query.getY(), 20, 20,
@@ -240,9 +227,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
 
         if (scrollable == null) {
             scrollable = new ScrollableContainerWidget(0, 0, cw, 0);
-            if (inst().config().reducedMotion.get()) {
-                scrollable.setAnimated(false);
-            }
+            if (inst().config().reducedMotion.get()) scrollable.setAnimated(false);
         }
         scrollable.setPosition(cx, aq_bpos);
         scrollable.setHeight(rb - aq_bpos);
@@ -268,10 +253,8 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
 
     private BetterWaystoneButton createWaystoneButton(int y, Waystone waystone) {
         Waystone waystoneFrom = menu.getWaystoneFrom();
-        Player player = Minecraft.getInstance().player;
-        int xpLevelCost = Math.round((float) PlayerWaystoneManager.predictExperienceLevelCost(
-                Objects.requireNonNull(player), waystone, menu.getWarpMode(), waystoneFrom));
-        BetterWaystoneButton btnWaystone = new BetterWaystoneButton(0, y, waystone, xpLevelCost,
+        // predictExperienceLevelCost removido — usa EMPTY_REQUIREMENT
+        BetterWaystoneButton btnWaystone = new BetterWaystoneButton(0, y, waystone, EMPTY_REQUIREMENT,
                 $ -> onWaystoneSelected(waystone), getOriginPos(), getOriginDim());
         btnWaystone.setWidth(scrollable.getInnerWidth() - BTN_GAP);
         if (waystoneFrom != null && waystone.getWaystoneUid().equals(waystoneFrom.getWaystoneUid())) {
@@ -293,21 +276,17 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
     @Override
     protected void containerTick() {
         super.containerTick();
-        queryField.tick();
+        // queryField.tick() removido — EditBox não tem tick() em 1.21.1
         if (!queryMatcher.getQuery().equals(queryField.getValue())) {
             queryMatcher.setQuery(queryField.getValue());
             updateFilters();
             updateList();
         }
         boolean reducedMotion = inst().config().reducedMotion.get();
-        if (reducedMotion == scrollable.isAnimated()) {
-            scrollable.setAnimated(!reducedMotion);
-        }
+        if (reducedMotion == scrollable.isAnimated()) scrollable.setAnimated(!reducedMotion);
     }
 
-    public int getMaxNameWidth() {
-        return Math.min(WAYSTONE_NAME_MAX_WIDTH, width - 36);
-    }
+    public int getMaxNameWidth() { return Math.min(WAYSTONE_NAME_MAX_WIDTH, width - 36); }
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
@@ -316,10 +295,8 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         if (shouldShownHeading()) {
             Waystone fromWaystone = menu.getWaystoneFrom();
             boolean iconHeading = fromWaystone == null;
-
             int hx1 = area_heading.getX() + (!iconHeading ? 0 : (area_heading.getWidth() - 16) / 2 - 1);
             int hx2 = !iconHeading ? (area_heading.getX() + area_heading.getWidth()) : (hx1 + 18);
-
             guiGraphics.fill(hx1, area_heading.getY(), hx2, area_heading.getY() + area_heading.getHeight(), 0x66000000);
 
             if (!iconHeading) {
@@ -327,23 +304,13 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
                         area_heading.getX() + area_heading.getWidth() / 2,
                         area_heading.getY() + area_heading.getHeight() / 2 - font.lineHeight / 2,
                         0xffffff);
-                int u = 0;
-                // WaystoneTypes agora está em api, não em core
-                if (fromWaystone.getWaystoneType().equals(WaystoneTypes.WAYSTONE)) u = 16;
+                int u = fromWaystone.getWaystoneType().equals(WaystoneTypes.WAYSTONE) ? 16 : 0;
                 guiGraphics.blit(MENU_TEXTURE, area_heading.getX() + 1, area_heading.getY() + 1, u, 76, 16, 16);
             } else {
-                ResourceLocation item_key = switch (menu.getWarpMode()) {
-                    case WARP_STONE -> ResourceLocation.fromNamespaceAndPath("waystones", "warp_stone");
-                    case WARP_SCROLL -> ResourceLocation.fromNamespaceAndPath("waystones", "warp_scroll");
-                    default -> null;
-                };
-
-                Item item = null;
-                if (item_key != null) {
-                    item = ForgeRegistries.ITEMS.getValue(item_key);
-                }
-                if (item != null) {
-                    guiGraphics.renderItem(new ItemStack(item),
+                // getWarpMode() removido — usa getWarpItem() diretamente
+                ItemStack warpItem = menu.getWarpItem();
+                if (!warpItem.isEmpty()) {
+                    guiGraphics.renderItem(warpItem,
                             area_heading.getX() + area_heading.getWidth() / 2 - 8,
                             area_heading.getY() + area_heading.getHeight() / 2 - 8);
                 }
@@ -362,8 +329,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
                     CText.translatable("gui.betterwaystonesmenu.waystone_selection.no_results").withStyle(style -> style.withColor(ChatFormatting.GRAY));
             guiGraphics.drawCenteredString(font, message,
                     scrollable.getX() + scrollable.getWidth() / 2,
-                    (scrollable.getY() + scrollable.getHeight() / 2) - (font.lineHeight / 2),
-                    0xffffff);
+                    (scrollable.getY() + scrollable.getHeight() / 2) - (font.lineHeight / 2), 0xffffff);
         }
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
@@ -377,9 +343,7 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         guiGraphics.pose().translate(-leftPos, -topPos, 0);
         guiGraphics.drawCenteredString(font,
                 getTitle().copy().withStyle(style -> style.withColor(ChatFormatting.GRAY)),
-                area_title.getX() + area_title.getWidth() / 2,
-                area_title.getY(),
-                0xffffff);
+                area_title.getX() + area_title.getWidth() / 2, area_title.getY(), 0xffffff);
         guiGraphics.pose().popPose();
     }
 
@@ -403,8 +367,8 @@ public abstract class BetterWaystoneSelectionScreenBase extends AbstractBetterWa
         }
 
         @Override
-        public List<Component> getTooltip() {
-            var list = new ArrayList<>(super.getTooltip());
+        public List<Component> getTooltipComponents() { // getTooltip() → getTooltipComponents()
+            var list = new ArrayList<>(super.getTooltipComponents());
             if (!active) list.add(CText.translatable("gui.betterwaystonesmenu.waystone_selection.config_requires_configured"));
             return Collections.unmodifiableList(list);
         }
