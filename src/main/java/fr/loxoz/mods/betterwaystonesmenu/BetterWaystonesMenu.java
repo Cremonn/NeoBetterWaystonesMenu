@@ -4,19 +4,19 @@ import fr.loxoz.mods.betterwaystonesmenu.config.BWMConfig;
 import fr.loxoz.mods.betterwaystonesmenu.handler.ScreenOpenHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.ConfigGuiHandler;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.IExtensionPoint;
-import net.minecraftforge.fml.ModContainer;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.forgespi.language.IModInfo;
-import net.minecraftforge.network.NetworkConstants;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.IExtensionPoint;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.client.ConfigScreenHandler;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.forgespi.language.IModInfo;
 
 import java.util.Optional;
 
@@ -24,28 +24,34 @@ import java.util.Optional;
 public class BetterWaystonesMenu {
     public static final String MOD_ID = "betterwaystonesmenu";
     private static BetterWaystonesMenu instance = null;
-    // private static final Logger LOGGER = LogUtils.getLogger();
     private ScreenOpenHandler screenOpenHandler = null;
     private final BWMConfig config;
-    private final ForgeConfigSpec spec;
+    private final ModConfigSpec spec;           // ForgeConfigSpec → ModConfigSpec
     private final ModContainer modContainer;
 
     public static BetterWaystonesMenu inst() { return instance; }
 
-    public BetterWaystonesMenu() {
+    // NeoForge injeta o IEventBus direto no construtor
+    public BetterWaystonesMenu(IEventBus modEventBus) {
         instance = this;
-        // Make sure the mod being absent on the other network side does not cause the client to display the server as incompatible
-        ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class, () -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY, (remote, isServer) -> true));
+
+        // Marca o mod como client-only para servidores não rejeitarem o cliente
+        ModLoadingContext.get().registerExtensionPoint(
+            IExtensionPoint.DisplayTest.class,
+            () -> new IExtensionPoint.DisplayTest(
+                () -> IExtensionPoint.DisplayTest.IGNORESERVERONLY,
+                (remote, isServer) -> true
+            )
+        );
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             screenOpenHandler = new ScreenOpenHandler();
-            MinecraftForge.EVENT_BUS.register(screenOpenHandler);
-            var builder = new ForgeConfigSpec.Builder();
+            NeoForge.EVENT_BUS.register(screenOpenHandler); // MinecraftForge → NeoForge
+            var builder = new ModConfigSpec.Builder();       // ForgeConfigSpec.Builder → ModConfigSpec.Builder
             config = new BWMConfig(builder);
             spec = builder.build();
             ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, spec);
-        }
-        else {
+        } else {
             config = null;
             spec = null;
         }
@@ -59,15 +65,17 @@ public class BetterWaystonesMenu {
     }
 
     public BWMConfig config() { return config; }
-    public ForgeConfigSpec configSpec() { return spec; }
-
+    public ModConfigSpec configSpec() { return spec; }
     public ModContainer getModContainer() { return modContainer; }
     public IModInfo getModInfo() { return modContainer != null ? modContainer.getModInfo() : null; }
+
     public Optional<Screen> getConfigScreen(Minecraft minecraft, Screen parent) {
         var info = getModInfo();
         if (info == null) return Optional.empty();
-        return ConfigGuiHandler.getGuiFactoryFor(info).map(f -> f.apply(minecraft, parent));
+        // ConfigGuiHandler → ConfigScreenHandler
+        return ConfigScreenHandler.getGuiFactoryFor(info).map(f -> f.apply(minecraft, parent));
     }
+
     public Optional<Screen> getConfigScreen(Minecraft minecraft) {
         return getConfigScreen(minecraft, minecraft.screen);
     }
