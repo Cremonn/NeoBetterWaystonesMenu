@@ -160,7 +160,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
 
     @Override
     protected void containerTick() {
-        queryField.tick();
         if (!queryMatcher.getQuery().equals(queryField.getValue())) {
             queryMatcher.setQuery(queryField.getValue());
         }
@@ -381,7 +380,7 @@ public void swapWaystones(int index, int otherIndex) {
         }
     }
 
-    public static class DraggedButton extends Button implements WidgetCompat {
+    public static class DraggedButton extends Button { // remove WidgetCompat
         public DraggedButton(int x, int y, int width, int height) {
             super(x, y, width, height, CText.empty(), $ -> {}, Button.DEFAULT_NARRATION);
             active = false;
