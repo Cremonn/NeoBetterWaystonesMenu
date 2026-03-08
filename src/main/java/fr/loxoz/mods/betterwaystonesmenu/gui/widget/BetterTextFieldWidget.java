@@ -1,5 +1,6 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.widget;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -19,25 +20,17 @@ public class BetterTextFieldWidget extends EditBox {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 1) {
-            setValue("");
-            return true;
-        }
+        if (button == 1) { setValue(""); return true; }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         super.renderWidget(guiGraphics, mouseX, mouseY, partialTicks);
-        if (!isVisible()) return;
-        if (!getValue().isEmpty()) return;
-        // drawShadow → drawString com shadow=true; x/y → getX()/getY()
-        guiGraphics.drawString(font, getMessage(), getX() + 4, (int) (getY() + (height - 8f) / 2f), 0xff262626, false);
+        if (!isVisible() || !getValue().isEmpty()) return;
+        Font font = Minecraft.getInstance().font; // font privado em EditBox → getInstance
+        guiGraphics.drawString(font, getMessage(), getX() + 4, (int)(getY() + (height - 8f) / 2f), 0xff262626, false);
     }
 
-    // Em 1.21.1 setX/setY/getX/getY já existem no parent — sem necessidade de wrappers
-    public void setPosition(int x, int y) {
-        setX(x);
-        setY(y);
-    }
+    public void setPosition(int x, int y) { setX(x); setY(y); }
 }
