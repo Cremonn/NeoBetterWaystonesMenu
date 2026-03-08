@@ -11,7 +11,8 @@ import fr.loxoz.mods.betterwaystonesmenu.util.WaystoneUtils;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.IQueryMatcher;
 import fr.loxoz.mods.betterwaystonesmenu.util.query.PartsQueryMatcher;
 import net.blay09.mods.balm.api.Balm;
-import net.blay09.mods.waystones.api.IWaystone;
+import net.blay09.mods.waystones.api.Waystone;           // IWaystone → Waystone
+import net.blay09.mods.waystones.api.WaystoneVisibility; // isGlobal() → getVisibility()
 import net.blay09.mods.waystones.core.PlayerWaystoneManager;
 import net.blay09.mods.waystones.menu.WaystoneSelectionMenu;
 import net.blay09.mods.waystones.network.message.RemoveWaystoneMessage;
@@ -35,7 +36,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen {
-    protected final List<IWaystone> waystones;
+    protected final List<Waystone> waystones;
     protected final Screen parent;
     private final Allowed allowed;
     protected ScrollableContainerWidget scrollable;
@@ -78,7 +79,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             queryField.setMaxLength(128);
         }
         queryField.setPosition(leftPos + backBtn.getWidth() + UI_GAP, topPos);
-        queryField.setWidth(leftPos + imageWidth - queryField.getX());
+        queryField.setWidth(leftPos + imageWidth - queryField.getX()); // _getX() → getX()
         addRenderableWidget(queryField);
         if (inst().config().focusSearch.get()) {
             setInitialFocus(queryField);
@@ -92,7 +93,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         }
         int scrollableY = topPos + queryField.getHeight() + UI_GAP;
         scrollable.setPosition(leftPos, scrollableY);
-        scrollable.setHeight(topPos + imageHeight - queryField.getY());
+        scrollable.setHeight(topPos + imageHeight - queryField.getY()); // _getY() → getY()
         addRenderableWidget(scrollable);
 
         if (draggedButton == null) {
@@ -105,7 +106,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void updateList() {
-        IWaystone prevFocusedWaystone = null;
+        Waystone prevFocusedWaystone = null;
         if (scrollable.getFocused() instanceof DraggableButton btn) {
             prevFocusedWaystone = btn.getWaystone();
         }
@@ -117,25 +118,26 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         int content_h = 0;
         int i = -1;
 
-        for (IWaystone waystone : waystones) {
+        for (Waystone waystone : waystones) {
             i++;
             int btn_h = 20;
             int btn_w = scrollable.getInnerWidth() - BTN_GAP - (allowed.deletion ? 20 : 0);
             var msg = WaystoneUtils.getTrimmedWaystoneName(waystone, font, (int) (btn_w * 0.8f));
-            if (waystone.isGlobal()) msg.withStyle(ChatFormatting.AQUA);
+            // isGlobal() → getVisibility() == WaystoneVisibility.GLOBAL
+            if (waystone.getVisibility() == WaystoneVisibility.GLOBAL) msg.withStyle(ChatFormatting.AQUA);
             var btn = new DraggableButton(0, y, btn_w, btn_h, msg, i, waystone);
             scrollable.contents().add(btn);
 
             if (Objects.equals(prevFocusedWaystone, waystone)) {
-                // changeFocus(boolean) removido — usar setFocused(true)
-                btn.setFocused(true);
+                btn.setFocused(true); // changeFocus(boolean) → setFocused(boolean)
                 scrollable.setFocused(btn);
                 scrollable.scrollElementIntoView(btn);
             }
 
             //noinspection ConstantConditions
-            if (allowed.deletion && (!waystone.isGlobal() || minecraft.player.getAbilities().instabuild)) {
-                var btn_rm = new BetterRemoveWaystoneButton(btn_w, y, 20, 20, waystone.isGlobal(), $ -> {
+            // isGlobal() → getVisibility() == WaystoneVisibility.GLOBAL
+            if (allowed.deletion && (waystone.getVisibility() != WaystoneVisibility.GLOBAL || minecraft.player.getAbilities().instabuild)) {
+                var btn_rm = new BetterRemoveWaystoneButton(btn_w, y, 20, 20, waystone.getVisibility() == WaystoneVisibility.GLOBAL, $ -> {
                     Player player = Objects.requireNonNull(Minecraft.getInstance().player);
                     PlayerWaystoneManager.deactivateWaystone(player, waystone);
                     Balm.getNetworking().sendToServer(new RemoveWaystoneMessage(waystone.getWaystoneUid()));
@@ -177,7 +179,7 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         if (super.mouseClicked(mouseX, mouseY, button)) {
             if (scrollable.getFocused() instanceof DraggableButton btn) {
                 if (prevFocused != null && prevFocused != btn) {
-                    prevFocused.setFocused(true); // changeFocus → setFocused
+                    prevFocused.setFocused(true);
                 }
                 if (!btn.isFocused()) {
                     btn.setFocused(true);
@@ -190,7 +192,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        // renderBackground agora recebe GuiGraphics + mouse + partialTicks
         renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
 
         int scrollEndsSize = 20;
@@ -207,7 +208,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
 
         drawVersionInfo(guiGraphics);
 
-        // bottom text info
         {
             var lines = font.split(CText.translatable("gui.betterwaystonesmenu.waystone_selection.drag_info"), (imageWidth * 2));
             int y = scrollable.getY() + scrollable.getHeight() + UI_GAP;
@@ -219,7 +219,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
-        // gradients de auto-scroll
         if (isDraggingWaystone()) {
             int x1 = scrollable.getX();
             int x2 = x1 + scrollable.getInnerWidth();
@@ -234,12 +233,12 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             }
         }
 
-        // render botão arrastado e dropzone
         if (isDraggingWaystone()) {
             var hoveredZone = dragContext.getHoveredDropZone(mouseX, mouseY);
             if (hoveredZone != null && hoveredZone.idx() != dragContext.getIndex()) {
                 int outlineY = scrollable.getY() - (int) scrollable.getScrollY();
-                Utils.drawOutline(guiGraphics, scrollable.getX(), outlineY + hoveredZone.yStart(), scrollable.getX() + scrollable.getInnerWidth() - BTN_GAP, outlineY + hoveredZone.yEnd(), 0x99ffffff);
+                Utils.drawOutline(guiGraphics, scrollable.getX(), outlineY + hoveredZone.yStart(),
+                        scrollable.getX() + scrollable.getInnerWidth() - BTN_GAP, outlineY + hoveredZone.yEnd(), 0x99ffffff);
             }
 
             guiGraphics.pose().pushPose();
@@ -262,7 +261,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         guiGraphics.pose().popPose();
     }
 
-    // renderBg obrigatório no 1.21
     @Override
     protected void renderBg(@NotNull GuiGraphics guiGraphics, float delta, int mouseX, int mouseY) {}
 
@@ -280,14 +278,12 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void swapWaystones(int index, int otherIndex) {
-        // NOTA: API do waystones 21.x mudou — swapWaystoneSorting pode não existir
-        // e SortWaystoneMessage agora recebe UUIDs em vez de índices
-        // Ajuste conforme a API disponível no waystones 21.1.27+
-        // PlayerWaystoneManager.swapWaystoneSorting(minecraft.player, index, otherIndex);
-        // Balm.getNetworking().sendToServer(new SortWaystoneMessage(
-        //     waystones.get(index).getWaystoneUid(),
-        //     waystones.get(otherIndex).getWaystoneUid()
-        // ));
+        //noinspection ConstantConditions
+        PlayerWaystoneManager.swapWaystoneSorting(minecraft.player, index, otherIndex);
+        Balm.getNetworking().sendToServer(new SortWaystoneMessage(
+                waystones.get(index).getWaystoneUid(),
+                waystones.get(otherIndex).getWaystoneUid()
+        ));
         updateList();
     }
 
@@ -315,7 +311,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void onDragStart(DraggableButton button, double mouseX, double mouseY) {
-        // button.x/button.y → button.getX()/button.getY()
         dragContext = new DragContext(button.index, (int) mouseX - button.getX(), (int) mouseY - button.getY());
         draggedButton.setMessage(button.getMessage());
     }
@@ -323,18 +318,16 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     public static record Allowed(boolean sorting, boolean deletion) {}
 
     public class DraggableButton extends Button {
-        private final IWaystone waystone;
+        private final Waystone waystone;
         private final int index;
 
-        public DraggableButton(int x, int y, int width, int height, Component message, int index, IWaystone waystone) {
-            // Button.builder() é o padrão no 1.21
-            super(Button.builder(message, $ -> {}).bounds(x, y, width, height).build().getX(),
-                  y, width, height, message, $ -> {}, Button.DEFAULT_NARRATION);
+        public DraggableButton(int x, int y, int width, int height, Component message, int index, Waystone waystone) {
+            super(x, y, width, height, message, $ -> {}, Button.DEFAULT_NARRATION);
             this.waystone = waystone;
             this.index = index;
         }
 
-        public IWaystone getWaystone() { return waystone; }
+        public Waystone getWaystone() { return waystone; }
         public int getIndex() { return index; }
 
         public boolean isMouseInside(double mouseX, double mouseY) {
@@ -360,17 +353,17 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
         }
 
         @Override
-        public void onClick(double p_93371_, double p_93372_) {}
+        public void onClick(double x, double y) {}
 
         @Override
-        public void playDownSound(@NotNull SoundManager p_93665_) {}
+        public void playDownSound(@NotNull SoundManager manager) {}
 
-        // getYImage removido no 1.21 — renderWidget substitui renderButton
         @Override
         public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
             if (dragContext != null && dragContext.index == index) return;
             guiGraphics.pose().pushPose();
             float prevAlpha = -1;
+            // getName() agora retorna Component — usar .getString()
             if (!queryMatcher.isBlank() && !queryMatcher.match(getMessage().getString())) {
                 prevAlpha = alpha;
                 alpha *= 0.5f;
