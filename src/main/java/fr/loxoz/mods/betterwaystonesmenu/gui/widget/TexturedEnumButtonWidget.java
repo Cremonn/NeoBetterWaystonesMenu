@@ -1,12 +1,10 @@
 package fr.loxoz.mods.betterwaystonesmenu.gui.widget;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import fr.loxoz.mods.betterwaystonesmenu.compat.CText;
 import fr.loxoz.mods.betterwaystonesmenu.compat.tooltip.IPositionedTooltipProvider;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
@@ -32,8 +30,7 @@ public class TexturedEnumButtonWidget<T> extends Button implements IPositionedTo
     }
 
     public TexturedEnumButtonWidget(int x, int y, int width, int height, List<T> values, T value, @Nullable MessageSupplier<T> messageSupplier, ResourceLocation texture, int u, int v, int textureW, int textureH) {
-        //noinspection ConstantConditions (no need for onPress since we handle it ourselves)
-        super(x, y, width, height, CText.empty(), null);
+        super(x, y, width, height, CText.empty(), $ -> {}, Button.DEFAULT_NARRATION);
         this.values = values;
         this.messageSupplier = messageSupplier;
         this.value = value;
@@ -46,10 +43,7 @@ public class TexturedEnumButtonWidget<T> extends Button implements IPositionedTo
 
     public List<T> getValues() { return values; }
     public T getValue() { return value; }
-    public void setValue(T value) {
-        this.value = value;
-        onChange();
-    }
+    public void setValue(T value) { this.value = value; onChange(); }
     public int getValueIndex() { return getValues().indexOf(value); }
     public void setValueIndex(int index) { setValue(getValues().get(index)); }
     public int shiftValueIndex(int delta) {
@@ -81,20 +75,18 @@ public class TexturedEnumButtonWidget<T> extends Button implements IPositionedTo
     }
 
     @Override
-    public void renderButton(@NotNull PoseStack matrices, int mouseX, int mouseY, float partialTicks) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.enableDepthTest();
-        blit(matrices, x, y, u + getValueIndex() * width, v + (isHoveredOrFocused() ? height : 0), width, height, textureW, textureH);
+    public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        guiGraphics.blit(texture, getX(), getY(),
+                u + getValueIndex() * width,
+                v + (isHoveredOrFocused() ? height : 0),
+                width, height, textureW, textureH);
     }
 
     @Override
-    public boolean shouldShowTooltip() {
-        return isHoveredOrFocused();
-    }
+    public boolean shouldShowTooltip() { return isHoveredOrFocused(); }
 
     @Override
-    public List<Component> getTooltip() {
+    public List<Component> getTooltipComponents() {
         return List.of(getMessage());
     }
 }
