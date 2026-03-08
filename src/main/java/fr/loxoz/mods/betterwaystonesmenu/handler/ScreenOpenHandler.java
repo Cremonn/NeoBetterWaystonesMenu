@@ -34,7 +34,7 @@ public class ScreenOpenHandler {
         if (client.player == null) return;
         try {
             var screen = supplier.supply(e.getScreen(), client.player.getInventory());
-            e.setScreen(screen); // setScreen ainda funciona igual
+            e.setNewScreen(screen);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
