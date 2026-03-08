@@ -23,13 +23,14 @@ public class PositionedTooltip implements IPositionedTooltipProvider {
     }
 
     @Override
-    public List<Component> getTooltip() {
-        return getTooltipComponents();
+    public List<Component> getTooltipComponents() {
+        return target.getTooltipComponents();
     }
 
     @Override
     public TooltipPos getTooltipPos(int mouseX, int mouseY, TooltipOffset widgetOffset) {
-        if (target instanceof IPositionedTooltipProvider positioned) return positioned.getTooltipPos(mouseX, mouseY, offset.get().add(widgetOffset));
+        if (target instanceof IPositionedTooltipProvider positioned)
+            return positioned.getTooltipPos(mouseX, mouseY, offset.get().add(widgetOffset));
         return new TooltipPos(mouseX, mouseY);
     }
 }
