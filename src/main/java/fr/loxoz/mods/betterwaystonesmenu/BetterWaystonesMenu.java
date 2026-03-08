@@ -35,22 +35,13 @@ public class BetterWaystonesMenu {
     public BetterWaystonesMenu(IEventBus modEventBus) {
         instance = this;
 
-        // Marca o mod como client-only para servidores não rejeitarem o cliente
-        ModLoadingContext.get().registerExtensionPoint(
-            IExtensionPoint.DisplayTest.class,
-            () -> new IExtensionPoint.DisplayTest(
-                () -> IExtensionPoint.DisplayTest.IGNORESERVERONLY,
-                (remote, isServer) -> true
-            )
-        );
-
         if (FMLEnvironment.dist == Dist.CLIENT) {
             screenOpenHandler = new ScreenOpenHandler();
             NeoForge.EVENT_BUS.register(screenOpenHandler); // MinecraftForge → NeoForge
             var builder = new ModConfigSpec.Builder();       // ForgeConfigSpec.Builder → ModConfigSpec.Builder
             config = new BWMConfig(builder);
             spec = builder.build();
-            ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, spec);
+            modContainer.registerConfig(ModConfig.Type.CLIENT, spec);
         } else {
             config = null;
             spec = null;
