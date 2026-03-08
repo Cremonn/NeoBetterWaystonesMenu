@@ -26,10 +26,9 @@ public class BetterWaystonesMenu {
 
     public static BetterWaystonesMenu inst() { return instance; }
 
-    // NeoForge 1.21.1 injeta ModContainer direto no construtor — sem ModLoadingContext
     public BetterWaystonesMenu(IEventBus modEventBus, ModContainer modContainer) {
         instance = this;
-        this.modContainer = modContainer; // atribuição antes de qualquer uso
+        this.modContainer = modContainer;
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             screenOpenHandler = new ScreenOpenHandler();
@@ -53,19 +52,10 @@ public class BetterWaystonesMenu {
     public ModConfigSpec configSpec() { return spec; }
     public ModContainer getModContainer() { return modContainer; }
 
-    // Evita importar IModInfo — usa var e acessa direto do ModContainer
-    public String getModDisplayName() {
-        return modContainer != null ? modContainer.getModInfo().getDisplayName() : null;
-    }
-    public Object getModVersion() {
-        return modContainer != null ? modContainer.getModInfo().getVersion() : null;
-    }
-
+    // Config screen desativado — ConfigScreenHandler foi removido em 1.21.1
+    // Para reativar, registre um IConfigScreenFactory no seu mod
     public Optional<Screen> getConfigScreen(Minecraft minecraft, Screen parent) {
-        if (modContainer == null) return Optional.empty();
-        // NeoForge 1.21.1: config screen via extensionPoint no modContainer
-        return modContainer.getCustomExtension(net.neoforged.neoforge.client.ConfigScreenHandler.ConfigScreenFactory.class)
-                .map(f -> f.screenFunction().apply(minecraft, parent));
+        return Optional.empty();
     }
 
     public Optional<Screen> getConfigScreen(Minecraft minecraft) {
