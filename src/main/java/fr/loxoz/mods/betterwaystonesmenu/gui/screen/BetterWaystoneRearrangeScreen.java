@@ -49,8 +49,8 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     public BetterWaystoneRearrangeScreen(WaystoneSelectionMenu container, Inventory playerInventory, Screen parent, Allowed allowed) {
         super(container, playerInventory, CText.translatable("gui.betterwaystonesmenu.waystone_selection.rearrange"));
         this.waystones = parent instanceof BetterWaystoneSelectionScreenBase base
-            ? base.waystones
-            : new ArrayList<>(container.getWaystones());
+                ? base.waystones
+                : new ArrayList<>(container.getWaystones());
         this.parent = parent;
         this.allowed = allowed;
         //noinspection SuspiciousNameCombination
@@ -295,7 +295,6 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void swapWaystones(int index, int otherIndex) {
-        // Clamp pra suportar shift até o início/fim
         int clampedOther = Mth.clamp(otherIndex, 0, waystones.size() - 1);
 
         //noinspection ConstantConditions
@@ -309,10 +308,22 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
             waystones.get(clampedOther).getWaystoneUid()
         ));
 
-    // Reordena a lista local para o updateList() refletir a nova ordem
+        // Reordena a lista local para o updateList() refletir a nova ordem
         Waystone tmp = waystones.get(index);
         waystones.set(index, waystones.get(clampedOther));
         waystones.set(clampedOther, tmp);
+
+        // Tenta sincronizar com a coleção interna do container (se for mutável)
+        var containerWaystones = menu.getWaystones();
+        if (containerWaystones instanceof List<Waystone> containerList) {
+            try {
+                Waystone tmp2 = containerList.get(index);
+                containerList.set(index, containerList.get(clampedOther));
+                containerList.set(clampedOther, tmp2);
+            } catch (UnsupportedOperationException ignored) {
+                // coleção imutável — sincronização via servidor apenas
+            }
+        }
 
         updateList();
     }
