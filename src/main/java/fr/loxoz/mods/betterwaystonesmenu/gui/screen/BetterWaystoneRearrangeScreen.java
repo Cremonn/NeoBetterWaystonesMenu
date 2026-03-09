@@ -48,7 +48,9 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
 
     public BetterWaystoneRearrangeScreen(WaystoneSelectionMenu container, Inventory playerInventory, Screen parent, Allowed allowed) {
         super(container, playerInventory, CText.translatable("gui.betterwaystonesmenu.waystone_selection.rearrange"));
-        this.waystones = new ArrayList<>(container.getWaystones());
+        this.waystones = parent instanceof BetterWaystoneSelectionScreenBase base
+            ? base.waystones
+            : new ArrayList<>(container.getWaystones());
         this.parent = parent;
         this.allowed = allowed;
         //noinspection SuspiciousNameCombination
