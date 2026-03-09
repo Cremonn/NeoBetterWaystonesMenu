@@ -293,16 +293,25 @@ public class BetterWaystoneRearrangeScreen extends AbstractBetterWaystoneScreen 
     }
 
     public void swapWaystones(int index, int otherIndex) {
+        // Clamp pra suportar shift até o início/fim
+        int clampedOther = Mth.clamp(otherIndex, 0, waystones.size() - 1);
+
         //noinspection ConstantConditions
         PlayerWaystoneManager.sortWaystoneSwap(
             minecraft.player,
             waystones.get(index).getWaystoneUid(),
-            waystones.get(otherIndex).getWaystoneUid()
+            waystones.get(clampedOther).getWaystoneUid()
         );
         Balm.getNetworking().sendToServer(new SortWaystoneMessage(
             waystones.get(index).getWaystoneUid(),
-            waystones.get(otherIndex).getWaystoneUid()
+            waystones.get(clampedOther).getWaystoneUid()
         ));
+
+    // Reordena a lista local para o updateList() refletir a nova ordem
+        Waystone tmp = waystones.get(index);
+        waystones.set(index, waystones.get(clampedOther));
+        waystones.set(clampedOther, tmp);
+
         updateList();
     }
 
